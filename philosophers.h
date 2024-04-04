@@ -30,8 +30,9 @@ typedef struct s_philosophers
 	long int		start_time;
 	long int		end_time;
 	long int		start_dead;
+	int				life;
 	bool			alive;
-	pthread_t		thread_philo;
+	pthread_t		thread;
 	pthread_mutex_t	my_fork;
 	pthread_mutex_t	*next_fork;
 	pthread_mutex_t	print;

@@ -41,26 +41,30 @@ bool	check_arg(int ac, char **av)
 
 void	all_dead(t_philosophers *philo)
 {
-	int	i;
+	// int	i;
 
-	i = philo->number_of_philosophers;
-	while (i >= 0)
-	{
-		philo[i].alive = false;
-		i--;
-	}
+	// i = philo->number_of_philosophers;
+	// printf("philoID %d\n", philo->id_philosphers);
+	// printf("philo->life %d\n", philo->life);
+	philo->life = 1;
+
+	// while (i >= 0)
+	// {
+		// // printf("philoID %d\n", philo[i].id_philosphers);
+		// philo[i].alive = false;
+		// i--;
+	// }
 }
 
-void	check_dead(t_philosophers *philo, int flag)
+void	check_dead(t_philosophers *philo, int flag, long int current_time)
 {
+	(void) current_time;
 	if (flag == 0)
 	{
 		if (philo->start_dead >= philo->time_to_die
 			|| philo->time_to_eat >= philo->time_to_die)
 		{
 			all_dead(philo);
-			// printf("\teating\tLe philosophe %d alive ? %d\n",philo->id_philosphers, philo->alive);
-			// philo->alive = false;
 			philo->end_time = philo->time_to_die / 1000;
 		}
 		else
@@ -73,8 +77,6 @@ void	check_dead(t_philosophers *philo, int flag)
 			|| philo->time_to_sleep >= philo->time_to_die)
 		{
 			all_dead(philo);
-			// philo->alive = false;
-			// printf("\tsleeping\tLe philosophe %d alive ? %d\n",philo->id_philosphers, philo->alive);
 			philo->end_time = philo->time_to_die / 1000 + philo->time_to_eat / 1000;
 		}
 	}
@@ -92,14 +94,11 @@ void	ft_usleep(t_philosophers *philo, long int mili_second)
 	current_time = (my_time.tv_sec * 1000) + (my_time.tv_usec / 1000);
 	printf("current time %lu\n", current_time);
 	i = 0;
-	// printf("i %ld\n", i);
-	
 	while (i < mili_second / 1000)
 	{
 		usleep(170);
 		gettimeofday(&my_time, NULL);
 		i = ((my_time.tv_sec * 1000) + (my_time.tv_usec / 1000)) - philo->start_time;
-		// printf("i %ld\n", i);
 	}
 }
 
@@ -112,15 +111,18 @@ void	ft_eating(t_philosophers *philo)
 	pthread_mutex_lock(&philo->print);
 	gettimeofday(&my_time, NULL);
 	current_time = (my_time.tv_sec * 1000) + (my_time.tv_usec / 1000);	
-	printf("%ld\tLe philosophe %d take fork ! \n",current_time - philo->start_time,  philo->id_philosphers);
-	printf("%ld\tLe philosophe %d take second fork ! \n",current_time - philo->start_time,  philo->id_philosphers);
-	printf("%ld\tLe philosophe %d start eat \n",current_time - philo->start_time,  philo->id_philosphers);
-	philo->number_of_times_each_philosopher_must_eat--;
-	// ft_usleep(philo, philo->time_to_eat);
-	check_dead(philo, 0);
-	pthread_mutex_unlock(&philo->print);
-	if (philo->alive == true)
+	check_dead(philo, 0, current_time);
+	// if (philo->alive == true && (current_time - philo->start_time) < philo->time_to_die / 1000)
+	if (philo->life == 0 && (current_time - philo->start_time) < philo->time_to_die / 1000)
+	{
+		printf("%ld\tLe philosophe %d take fork ! \n",current_time - philo->start_time,  philo->id_philosphers);
+		printf("%ld\tLe philosophe %d take second fork ! \n",current_time - philo->start_time,  philo->id_philosphers);
+		printf("%ld\tLe philosophe %d start eat \n",current_time - philo->start_time,  philo->id_philosphers);
 		usleep(philo->time_to_eat);
+	}
+	pthread_mutex_unlock(&philo->print);
+	philo->number_of_times_each_philosopher_must_eat--;
+		// ft_usleep(philo, philo->time_to_eat);
 	pthread_mutex_unlock(&philo->my_fork);
 	pthread_mutex_unlock(philo->next_fork);
 }
@@ -133,21 +135,19 @@ void	sleeping(t_philosophers *philo)
 	pthread_mutex_lock(&philo->print);
 	gettimeofday(&my_time, NULL);
 	current_time = (my_time.tv_sec * 1000) + (my_time.tv_usec / 1000);
-	printf("%ld\tLe philosophe %d start sleep !\n",current_time - philo->start_time, philo->id_philosphers);
-	check_dead(philo, 1);
-	if (philo->alive == true)
+	// if (philo->alive == true && (current_time - philo->start_time) < philo->time_to_die / 1000)
+	if (philo->life == 0 && (current_time - philo->start_time) < philo->time_to_die / 1000)
+	{
+		printf("%ld\tLe philosophe %d start sleep !\n",current_time - philo->start_time, philo->id_philosphers);
 	    usleep(philo->time_to_sleep);
+	}
+	check_dead(philo, 1, current_time);
 	// ft_usleep(philo, philo->time_to_sleep);
 	pthread_mutex_unlock(&philo->print);
 }
 
 void	thinking(t_philosophers *philo)
 {
-	// if (philo->alive == false)
-	// {
-	// 	return;
-	// }
-	
 	struct timeval my_time;
   	long int current_time;
 	pthread_mutex_lock(&philo->print);
@@ -157,66 +157,98 @@ void	thinking(t_philosophers *philo)
 	pthread_mutex_unlock(&philo->print);
 }
 
+void	add_dead(t_philosophers *philo)
+{
+	int i;
+
+	i = 0;
+	while (i < (int)philo->number_of_philosophers)
+	{
+		if (philo[i].life == 0)
+			philo[i].life = 2;
+		i++;
+	}
+	
+}
+
+int	check_life(t_philosophers *philo)
+{
+	int i;
+	int j;
+	int	flag;
+
+	j = 0;
+	i = 0;
+	flag = 1;
+	(void) j;
+	while (i < (int)philo->number_of_philosophers)
+	{
+		// if (philo[i].life == 1)
+		// {
+		// 	j = i;
+		// 	while (i > 0)
+		// 	{
+		// 		philo[i - 1].life = 2;
+		// 		i--;
+		// 	}
+		// 	i = j;
+		// 	flag = 0;
+		// }
+		// if(flag == 0)
+		// 	philo[i].life = 2;
+		i++;
+	}
+	if (flag == 0)
+		return (1);
+	return (0);
+}
 void	*round_table(void *arg)
 {
 	t_philosophers	*philo = (t_philosophers *) arg;
 	struct timeval start;
 	gettimeofday(&start, NULL);
 	philo->start_time = (start.tv_sec * 1000) + (start.tv_usec / 1000);
-	while (philo->alive == true)
+	if (check_life(philo) != 0)
+		pthread_exit(EXIT_SUCCESS);	
+	while (philo->life == 0)
 	{
-		if (philo->alive == true)
-			ft_eating(philo);
-		if (philo->alive == false)
+		if (philo->life == 0)
+			ft_eating(philo);	
+		if(philo->number_of_times_each_philosopher_must_eat == 0 || philo->life != 0)
 		{
-			printf("%ld\teating Le philosophe %d est mort !\n", philo->end_time, philo->id_philosphers);
-			break;
-		}		
-		if(philo->number_of_times_each_philosopher_must_eat == 0)
-			break;
-		printf("\t\t\t\tTEST\n\t\t\tvivant : %d\n", philo->alive);
-		if (philo->alive == true)
-			sleeping(philo);
-		if (philo->alive == false)
-		{
-			printf("%ld\tsleep Le philosophe %d est mort !\n", philo->end_time, philo->id_philosphers);
+			philo->life = 1;
+			add_dead(philo);
 			break;
 		}
+		if (philo->life == 0)
+			sleeping(philo);
 		else
+		{
+			philo->life = 1;
+			add_dead(philo);
+			break;
+		}
+		if (philo->life == 0)
 			thinking(philo);
 	}
 	pthread_exit(EXIT_SUCCESS);	
 }
 
-int	get_thread(t_data *data)
+void	get_thread(t_data *data)
 {
 	unsigned int	num_fork;
 
 	num_fork = data->data_philo->number_of_philosophers;
 	while (num_fork > 0)
 	{
-		pthread_create(&data->data_philo[num_fork -1].thread_philo, NULL, round_table, &data->data_philo[num_fork - 1]);
+		pthread_create(&data->data_philo[num_fork -1].thread, NULL, round_table, &data->data_philo[num_fork - 1]);
 		num_fork--;
 	}
 	while (num_fork < data->data_philo->number_of_philosophers)
 	{
-		if (data->data_philo[num_fork].alive == false)
-		{
-			pthread_mutex_lock(&data->data_philo[num_fork].print);
-			printf("%ld\tLe philosophe %d est mort !\n", data->data_philo[num_fork].end_time, data->data_philo[num_fork].id_philosphers);
-			pthread_mutex_unlock(&data->data_philo[num_fork].print);
-			return(0);
-		}
+		pthread_join(data->data_philo[num_fork].thread, NULL);
 		num_fork++;
-		if(num_fork == data->data_philo->number_of_philosophers && data->data_philo->number_of_times_each_philosopher_must_eat > 0)
-			num_fork = 0;
-	}	
-	while (num_fork > 0)
-	{
-		pthread_join(data->data_philo[num_fork - 1].thread_philo, NULL);
-		num_fork--;
 	}
-	return (0);
 }
 
 int	main(int ac, char **av)
@@ -227,6 +259,17 @@ int	main(int ac, char **av)
 	init_philo(&data, av);
 	// print_test_init(&data);
 	get_thread(&data);
+	for (unsigned int i = 0; i < data.data_philo->number_of_philosophers; i++)
+    {
+		// printf("%ld\tLe philosophe %d est mort, arrêt du programme.\n", data.data_philo->end_time, data.data_philo[i].id_philosphers);
+		printf("id%d\n", data.data_philo[i].id_philosphers);
+		printf("life = %d\n", data.data_philo[i].life);
+		// if (data.data_philo[i].life == 1)
+        // {
+            // printf("%ld\tLe philosophe %d est mort, arrêt du programme.\n", data.data_philo->end_time, data.data_philo[i].id_philosphers);
+            // return (0); // Arrête le programme
+        // }
+    }
 	// free_all(&data);
 	return (0);
 }

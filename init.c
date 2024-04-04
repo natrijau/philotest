@@ -35,6 +35,7 @@ void	init_philo(t_data *data, char **av)
 		data->data_philo[i].alive = true;
 		data->data_philo[i].start_dead = 0;
 		data->data_philo[i].end_time = 0;
+		data->data_philo[i].life = 0;
 		data->data_philo[i].next_fork = &data->data_philo[i + 1].my_fork;
 		i++;
 	}
